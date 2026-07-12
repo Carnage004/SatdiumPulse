@@ -1,2 +1,2 @@
-# SatdiumPulse
-AI-powered stadium concierge for FIFA World Cup 2026 — real-time navigation, crowd management, accessibility, and multilingual assistance powered by Gemini.
+StadiumPulse is a GenAI-powered concierge for fans, staff, and volunteers at FIFA World Cup 2026 venues. It combines live crowd data, GPS-based positioning, and Gemini-powered conversational AI to provide real-time gate recommendations, multilingual assistance, accessibility-aware routing, sustainable transport suggestions, and proactive decision support — all through a single chat interface, spanning all 16 tournament host stadiums.
+
