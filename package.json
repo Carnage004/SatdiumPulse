@@ -1,0 +1,12 @@
+{
+  "name": "stadium-pulse",
+  "version": "1.0.0",
+  "description": "StadiumPulse — FIFA World Cup 2026 AI Concierge",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
