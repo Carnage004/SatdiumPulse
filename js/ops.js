@@ -194,36 +194,33 @@ async function generateOpsBriefing() {
   const medGates    = stadiumData.gates.filter(g => g.congestion === 'medium');
   const fastestGate = [...stadiumData.gates].sort((a,b) => a.wait_minutes - b.wait_minutes)[0];
 
-  if (GEMINI_API_KEY && GEMINI_API_KEY !== 'YOUR_GEMINI_API_KEY_HERE') {
-    try {
-      const prompt = `You are a stadium operations AI. Given this live data, write a 2-3 sentence actionable ops briefing for stadium staff. Be direct and specific — mention exact gate names and recommended actions.
+  try {
+    const prompt = `You are a stadium operations AI. Given this live data, write a 2-3 sentence actionable ops briefing for stadium staff. Be direct and specific — mention exact gate names and recommended actions.
 
 Stadium data:
 ${JSON.stringify(stadiumData, null, 2)}
  
 Write a concise operations briefing paragraph with recommended actions right now.`;
 
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.5, maxOutputTokens: 200 }
-        })
-      });
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.5, maxOutputTokens: 200 }
+      })
+    });
 
-      if (res.ok) {
-        const data = await res.json();
-        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (text) {
-          el.innerHTML = `<p style="color:var(--text-secondary);line-height:1.7">${text.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>')}</p>`;
-          return;
-        }
+    if (res.ok) {
+      const data = await res.json();
+      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (text) {
+        el.innerHTML = `<p style="color:var(--text-secondary);line-height:1.7">${text.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>')}</p>`;
+        return;
       }
-    } catch(e) { 
-      console.warn("Falling back to static builder for operations briefing:", e.message);
     }
+  } catch(e) { 
+    console.warn("Falling back to static builder for operations briefing:", e.message);
   }
 
   await delay(600);

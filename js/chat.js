@@ -62,15 +62,7 @@ function handleSubmit(e) {
     });
 }
 
-function sendChip(btn) {
-  const chipText = btn.textContent.toLowerCase();
-  if (chipText.includes('wheelchair') || chipText.includes('access')) {
-    needsAccessibility = true;
-    updateProactiveRecommendations();
-  }
-  document.getElementById('chatInput').value = btn.textContent.replace(/^[^\w¿]*/u, '').trim();
-  handleSubmit(new Event('submit', { cancelable: true }));
-}
+
 
 /**
  * Appends a bubble to the messages log container.
@@ -159,13 +151,17 @@ function removeTypingIndicator() {
 
 /**
  * Sets up SpeechRecognition interface bindings for Speech-to-Text inputs.
+ * Ensures only one SpeechRecognition instance is created for the app lifetime.
  */
 function initSpeechRecognition() {
+  if (recognition) return; // Safeguard: never create more than one instance
+
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) {
     console.warn("Speech recognition is not supported in this browser.");
     return;
   }
+  
   recognition = new SpeechRecognition();
   recognition.continuous = false;
   recognition.interimResults = false;
@@ -185,13 +181,17 @@ function initSpeechRecognition() {
   };
 
   recognition.onresult = (event) => {
-    const resultText = event.results[0][0].transcript;
-    document.getElementById('chatInput').value = resultText;
-    handleSubmit(new Event('submit', { cancelable: true }));
+    // Only proceed if the result is final to avoid interim duplicate triggers
+    if (event.results[0] && event.results[0].isFinal) {
+      const resultText = event.results[0][0].transcript;
+      document.getElementById('chatInput').value = resultText;
+      handleSubmit(new Event('submit', { cancelable: true }));
+    }
   };
 
   recognition.onerror = (e) => {
     console.error("Speech recognition error:", e.error);
+    recognition.abort(); // Explicitly abort session on error
     isRecognizing = false;
     const btn = document.getElementById('micBtn');
     if (btn) btn.classList.remove('recording');
@@ -209,8 +209,12 @@ function toggleVoiceInput() {
   if (isRecognizing) {
     recognition.stop();
   } else {
-    recognition.lang = navigator.language || 'en-US';
-    recognition.start();
+    try {
+      recognition.lang = navigator.language || 'en-US';
+      recognition.start();
+    } catch (err) {
+      console.warn("Speech recognition already running or failed to start:", err);
+    }
   }
 }
 
@@ -328,21 +332,16 @@ function buildContextPayload() {
 }
 
 /**
- * Sends messages to Gemini models or catches fallback conditions.
+ * Sends messages to the Express backend proxy endpoint (/api/chat) or falls back
+ * gracefully to rule-based routing if the server fails or lacks config.
  */
 async function getAIResponse(userMessage) {
-  if (!GEMINI_API_KEY || GEMINI_API_KEY === 'YOUR_GEMINI_API_KEY_HERE') {
-    await delay(900 + Math.random() * 600);
-    return getFallbackResponse(userMessage);
-  }
-
   const contextData = buildContextPayload();
   const contextPayload = JSON.stringify(contextData, null, 2);
   const fullUserMessage = `Stadium operations data:\n\`\`\`json\n${contextPayload}\n\`\`\`\n\nFan question: ${userMessage}`;
 
   try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
-    const res = await fetch(url, {
+    const res = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -354,11 +353,15 @@ async function getAIResponse(userMessage) {
       })
     });
 
-    if (!res.ok) throw new Error(`API returned status ${res.status}`);
+    if (!res.ok) {
+      console.warn("Backend proxy returned error status, using local fallback responses.");
+      return getFallbackResponse(userMessage);
+    }
+
     const data = await res.json();
     return data?.candidates?.[0]?.content?.parts?.[0]?.text || getFallbackResponse(userMessage);
   } catch(e) {
-    console.error("Gemini API error:", e);
+    console.error("Failed to connect to backend proxy:", e);
     return getFallbackResponse(userMessage);
   }
 }

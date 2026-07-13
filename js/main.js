@@ -84,9 +84,6 @@ async function init() {
   showWelcomeMessage();
   renderOpsView();
 
-  if (GEMINI_API_KEY && GEMINI_API_KEY !== 'YOUR_GEMINI_API_KEY_HERE') {
-    document.getElementById('apiHint').style.display = 'none';
-  }
 }
 
 /**

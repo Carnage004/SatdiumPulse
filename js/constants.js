@@ -4,9 +4,6 @@
    global variables shared across modules.
    ══════════════════════════════════════════════════════════════════ */
 
-// 🔑 CONFIGURATION — Add your Gemini API key here
-const GEMINI_API_KEY = 'YOUR_GEMINI_API_KEY_HERE';
-const GEMINI_MODEL = 'gemini-2.0-flash';
 
 // Match configuration parameters
 const MATCH_DURATION_MIN = 105;
