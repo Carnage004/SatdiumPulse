@@ -1,0 +1,70 @@
+{
+  "stadiums": [
+    { "id": "metlife",      "name": "MetLife Stadium",         "city": "East Rutherford, NJ", "country": "USA",    "lat": 40.8135,  "lng": -74.0745,  "capacity": 82500 },
+    { "id": "att",          "name": "AT&T Stadium",            "city": "Arlington, TX",       "country": "USA",    "lat": 32.7480,  "lng": -97.0929,  "capacity": 80000 },
+    { "id": "sofi",         "name": "SoFi Stadium",            "city": "Inglewood, CA",       "country": "USA",    "lat": 33.9535,  "lng": -118.3392, "capacity": 70240 },
+    { "id": "levis",        "name": "Levi's Stadium",          "city": "Santa Clara, CA",     "country": "USA",    "lat": 37.4032,  "lng": -121.9698, "capacity": 68500 },
+    { "id": "allegiant",    "name": "Allegiant Stadium",       "city": "Las Vegas, NV",       "country": "USA",    "lat": 36.0906,  "lng": -115.1833, "capacity": 65000 },
+    { "id": "arrowhead",    "name": "Arrowhead Stadium",       "city": "Kansas City, MO",     "country": "USA",    "lat": 39.0490,  "lng": -94.4839,  "capacity": 76416 },
+    { "id": "gillette",     "name": "Gillette Stadium",        "city": "Foxborough, MA",      "country": "USA",    "lat": 42.0909,  "lng": -71.2643,  "capacity": 65878 },
+    { "id": "lincoln",      "name": "Lincoln Financial Field", "city": "Philadelphia, PA",    "country": "USA",    "lat": 39.9008,  "lng": -75.1675,  "capacity": 69176 },
+    { "id": "nrg",          "name": "NRG Stadium",             "city": "Houston, TX",         "country": "USA",    "lat": 29.6847,  "lng": -95.4107,  "capacity": 72220 },
+    { "id": "hardrock",     "name": "Hard Rock Stadium",       "city": "Miami, FL",           "country": "USA",    "lat": 25.9580,  "lng": -80.2389,  "capacity": 65326 },
+    { "id": "mercedesbenz", "name": "Mercedes-Benz Stadium",   "city": "Atlanta, GA",         "country": "USA",    "lat": 33.7553,  "lng": -84.4006,  "capacity": 71000 },
+    { "id": "azteca",       "name": "Estadio Azteca",          "city": "Mexico City",         "country": "Mexico", "lat": 19.3029,  "lng": -99.1506,  "capacity": 87523 },
+    { "id": "bbva",         "name": "Estadio BBVA",            "city": "Monterrey",           "country": "Mexico", "lat": 25.6693,  "lng": -100.2437, "capacity": 51350 },
+    { "id": "akron",        "name": "Estadio Akron",           "city": "Guadalajara",         "country": "Mexico", "lat": 20.6729,  "lng": -103.3997, "capacity": 46732 },
+    { "id": "bcplace",      "name": "BC Place",                "city": "Vancouver",           "country": "Canada", "lat": 49.2767,  "lng": -123.1116, "capacity": 54500 },
+    { "id": "bmofield",     "name": "BMO Field",               "city": "Toronto",             "country": "Canada", "lat": 43.6334,  "lng": -79.4179,  "capacity": 45736 }
+  ],
+  "matches": [
+    {
+      "id": "qf1", "teams": "France vs Morocco", "stage": "Quarter-Final",
+      "stadium_id": "gillette", "stadium_name": "Gillette Stadium", "city": "Foxborough, MA",
+      "lat": 42.0909, "lng": -71.2643,
+      "kickoff_utc": "2026-07-09T18:00:00Z"
+    },
+    {
+      "id": "qf2", "teams": "Spain vs Belgium", "stage": "Quarter-Final",
+      "stadium_id": "sofi", "stadium_name": "SoFi Stadium", "city": "Inglewood, CA",
+      "lat": 33.9535, "lng": -118.3392,
+      "kickoff_utc": "2026-07-10T22:00:00Z"
+    },
+    {
+      "id": "qf3", "teams": "Norway vs England", "stage": "Quarter-Final",
+      "stadium_id": "hardrock", "stadium_name": "Hard Rock Stadium", "city": "Miami, FL",
+      "lat": 25.9580, "lng": -80.2389,
+      "kickoff_utc": "2026-07-11T18:00:00Z"
+    },
+    {
+      "id": "qf4", "teams": "Argentina vs Switzerland", "stage": "Quarter-Final",
+      "stadium_id": "arrowhead", "stadium_name": "Arrowhead Stadium", "city": "Kansas City, MO",
+      "lat": 39.0490, "lng": -94.4839,
+      "kickoff_utc": "2026-07-12T09:00:00Z"
+    },
+    {
+      "id": "sf1", "teams": "France vs Spain", "stage": "Semi-Final",
+      "stadium_id": "att", "stadium_name": "AT&T Stadium", "city": "Arlington, TX",
+      "lat": 32.7480, "lng": -97.0929,
+      "kickoff_utc": "2026-07-14T22:00:00Z"
+    },
+    {
+      "id": "sf2", "teams": "England vs Argentina", "stage": "Semi-Final",
+      "stadium_id": "mercedesbenz", "stadium_name": "Mercedes-Benz Stadium", "city": "Atlanta, GA",
+      "lat": 33.7553, "lng": -84.4006,
+      "kickoff_utc": "2026-07-15T22:00:00Z"
+    },
+    {
+      "id": "thirdplace", "teams": "TBD vs TBD", "stage": "Third Place Play-off",
+      "stadium_id": "hardrock", "stadium_name": "Hard Rock Stadium", "city": "Miami, FL",
+      "lat": 25.9580, "lng": -80.2389,
+      "kickoff_utc": "2026-07-18T18:00:00Z"
+    },
+    {
+      "id": "final", "teams": "TBD vs TBD", "stage": "Final",
+      "stadium_id": "metlife", "stadium_name": "MetLife Stadium", "city": "East Rutherford, NJ",
+      "lat": 40.8135, "lng": -74.0745,
+      "kickoff_utc": "2026-07-19T20:00:00Z"
+    }
+  ]
+}

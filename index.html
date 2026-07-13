@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="StadiumPulse — AI-powered stadium concierge for FIFA World Cup 2026 fans. Get real-time gate congestion, accessibility info, and personalized navigation in any language." />
+  <title>StadiumPulse — FIFA World Cup 2026 AI Concierge</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- ─── Loading Screen ────────────────────────────────────────── -->
+  <div id="loadingScreen" class="loading-screen" role="progressbar" aria-valuetext="Initializing StadiumPulse...">
+    <div class="loading-content">
+      <div class="loading-logo">⚡</div>
+      <div class="loading-spinner"></div>
+      <h1 class="loading-title">StadiumPulse</h1>
+      <p class="loading-status" id="loadingStatus">Locating live match stadium...</p>
+    </div>
+  </div>
+
+  <!-- ─── Location fallback banner ────────────────────────────── -->
+  <div class="location-banner hidden" id="locationBanner" role="alert">
+    <span class="location-banner-icon">📍</span>
+    <span id="locationBannerText">Using approximate location — enable GPS for live tracking.</span>
+    <button class="location-banner-close" onclick="dismissLocationBanner()" aria-label="Dismiss">✕</button>
+  </div>
+  <!-- ─── City input panel (shown when GPS denied) ─────────────── -->
+  <div class="city-input-panel hidden" id="cityInputPanel" role="complementary" aria-label="Manual location input">
+    <span class="city-input-label">📍 Set your city for distance estimates:</span>
+    <div class="city-input-row">
+      <input type="text" id="cityInput" class="city-text-input" placeholder="e.g. London, Tokyo, Buenos Aires…" autocomplete="off" maxlength="60" aria-label="Enter your city" onkeydown="if(event.key==='Enter')handleCitySubmit()"/>
+      <button class="city-submit-btn" onclick="handleCitySubmit()" id="citySubmitBtn">Set Location</button>
+    </div>
+  </div>
+  <!-- ─── Header ─────────────────────────────────────────────────── -->
+  <header class="app-header">
+    <div class="header-left">
+      <div class="logo">
+        <span class="logo-icon">⚡</span>
+        <span class="logo-text">Stadium<span class="logo-accent">Pulse</span></span>
+      </div>
+      <div class="match-pill" id="matchPill">
+        <span class="match-teams" id="matchTeams">Argentina vs Croatia</span>
+        <span class="divider">·</span>
+        <span class="countdown" id="countdown">–</span>
+        <span class="divider">·</span>
+        <span class="weather" id="weather">–</span>
+      </div>
+      <!-- Venue identification badge -->
+      <div class="venue-badge hidden" id="venueBadge" aria-live="polite">
+        <span class="venue-badge-icon">🏟️</span>
+        <span class="venue-badge-text" id="venueBadgeText">Not at a tracked venue</span>
+      </div>
+    </div>
+    <nav class="tab-nav">
+      <button class="tab-btn active" id="tabFan" onclick="switchTab('fan')">
+        <span class="tab-icon">🏟️</span> Fan View
+      </button>
+      <button class="tab-btn" id="tabOps" onclick="switchTab('ops')">
+        <span class="tab-icon">📊</span> Staff Ops
+      </button>
+    </nav>
+  </header>
+
+  <!-- ─── Fan View ──────────────────────────────────────────────── -->
+  <main class="fan-view" id="fanView">
+
+    <!-- Map Panel -->
+    <section class="map-panel" aria-label="Stadium map">
+      <!-- Live match / distance card -->
+      <div class="live-match-card hidden" id="liveMatchCard" aria-live="polite">
+        <div class="lmc-left">
+          <span class="lmc-status" id="lmcStatus">NEXT</span>
+          <div class="lmc-teams" id="lmcTeams">–</div>
+          <div class="lmc-meta" id="lmcMeta">–</div>
+        </div>
+        <div class="lmc-right">
+          <div class="lmc-distance" id="lmcDistance">–</div>
+          <div class="lmc-flight" id="lmcFlight">–</div>
+          <div class="lmc-clock" id="lmcClock">–</div>
+        </div>
+      </div>
+      <div class="map-header">
+        <h2 class="map-title" id="mapTitle">MetLife Stadium</h2>
+        <div class="map-header-right">
+          <div class="legend">
+            <span class="legend-dot low"></span> Low
+            <span class="legend-dot medium"></span> Medium
+            <span class="legend-dot high"></span> High
+            <span id="gatesStatusNote" class="gates-status-note hidden"></span>
+          </div>
+          <select id="stadiumSelect" class="stadium-select" onchange="handleManualStadiumSelect(this.value)" title="Select Stadium">
+            <!-- Populated via JS -->
+          </select>
+          <button class="sim-toggle" id="simToggle" onclick="toggleSimMode()" title="Click anywhere on the map to set your position">
+            <span class="sim-toggle-icon">🖱️</span>
+            <span class="sim-toggle-label">Simulate</span>
+          </button>
+        </div>
+      </div>
+      <div class="map-container" style="position: relative; overflow: hidden; touch-action: none;">
+        <svg id="stadiumMap" viewBox="0 0 480 380" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Stadium map showing 5 gates" onclick="onMapClick(event)" style="cursor:default">
+          <g id="mapViewport" style="transform-origin: 0 0; transition: transform 0.05s linear;">
+            <!-- Outer stadium shell -->
+            <ellipse cx="240" cy="190" rx="220" ry="170" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="2"/>
+            <ellipse cx="240" cy="190" rx="195" ry="148" fill="rgba(255,255,255,0.025)" stroke="rgba(255,255,255,0.08)" stroke-width="1.5"/>
+
+            <!-- Field -->
+            <ellipse cx="240" cy="190" rx="105" ry="80" fill="rgba(34,197,94,0.12)" stroke="rgba(34,197,94,0.25)" stroke-width="1.5"/>
+            <ellipse cx="240" cy="190" rx="88" ry="66" fill="rgba(34,197,94,0.08)" stroke="rgba(34,197,94,0.15)" stroke-width="1"/>
+            <!-- Halfway line -->
+            <line x1="240" y1="124" x2="240" y2="256" stroke="rgba(34,197,94,0.2)" stroke-width="1"/>
+            <!-- Centre circle -->
+            <circle cx="240" cy="190" r="22" fill="none" stroke="rgba(34,197,94,0.2)" stroke-width="1"/>
+            <circle cx="240" cy="190" r="2" fill="rgba(34,197,94,0.4)"/>
+
+            <!-- Field label -->
+            <text x="240" y="195" text-anchor="middle" fill="rgba(255,255,255,0.2)" font-size="9" font-family="Inter" font-weight="500">PITCH</text>
+
+
+
+            <!-- Section labels (clickable) -->
+            <text x="133" y="110" text-anchor="middle" class="section-label" onclick="onSectionClick('214')" font-size="8" font-family="Inter" font-weight="600">SEC 214</text>
+            <text x="347" y="110" text-anchor="middle" class="section-label" onclick="onSectionClick('120')" font-size="8" font-family="Inter" font-weight="600">SEC 120</text>
+            <text x="133" y="278" text-anchor="middle" class="section-label" onclick="onSectionClick('108')" font-size="8" font-family="Inter" font-weight="600">SEC 108</text>
+            <text x="347" y="278" text-anchor="middle" class="section-label" onclick="onSectionClick('340')" font-size="8" font-family="Inter" font-weight="600">SEC 340</text>
+
+            <!-- Amenity icons -->
+            <g id="amenityIcons">
+              <!-- Restroom 214 -->
+              <g class="amenity-icon" data-amenity="restroom-214" transform="translate(110,92)">
+                <circle r="10" fill="rgba(56,189,248,0.15)" stroke="rgba(56,189,248,0.4)" stroke-width="1"/>
+                <text text-anchor="middle" dy="4" font-size="10">🚻</text>
+              </g>
+              <!-- Restroom 108 -->
+              <g class="amenity-icon" data-amenity="restroom-108" transform="translate(110,260)">
+                <circle r="10" fill="rgba(56,189,248,0.15)" stroke="rgba(56,189,248,0.4)" stroke-width="1"/>
+                <text text-anchor="middle" dy="4" font-size="10">🚻</text>
+              </g>
+              <!-- First Aid Gate 3 -->
+              <g class="amenity-icon" data-amenity="first-aid" transform="translate(370,192)">
+                <circle r="10" fill="rgba(56,189,248,0.15)" stroke="rgba(56,189,248,0.4)" stroke-width="1"/>
+                <text text-anchor="middle" dy="4" font-size="10">🏥</text>
+              </g>
+              <!-- Family Room Sec 120 -->
+              <g class="amenity-icon" data-amenity="family-room" transform="translate(370,92)">
+                <circle r="10" fill="rgba(56,189,248,0.15)" stroke="rgba(56,189,248,0.4)" stroke-width="1"/>
+                <text text-anchor="middle" dy="4" font-size="10">👨‍👩‍👧</text>
+              </g>
+            </g>
+
+            <!-- Seating Sections Layer (Labeled Zones G1-G5 seating zones) -->
+            <path id="zone108" class="section-zone" d="M 68 190 A 172 135 0 0 0 178 80 L 195 95 A 150 115 0 0 1 85 190 Z" onclick="onSectionClick('108')"/>
+            <path id="zone120" class="section-zone" d="M 302 80 A 172 135 0 0 0 412 190 L 395 190 A 150 115 0 0 1 285 95 Z" onclick="onSectionClick('120')"/>
+            <path id="zone214" class="section-zone" d="M 178 80 A 172 135 0 0 0 302 80 L 285 95 A 150 115 0 0 1 195 95 Z" onclick="onSectionClick('214')"/>
+            <path id="zone340" class="section-zone" d="M 68 190 A 172 135 0 0 1 412 190 L 395 190 A 150 115 0 0 0 85 190 Z" onclick="onSectionClick('340')"/>
+
+            <!-- Gate Nodes -->
+            <!-- Gate 1 — Top center -->
+            <g class="gate-node" id="gateNode1" data-gate="Gate 1" transform="translate(240,42)" onclick="onGateClick('Gate 1')" role="button" tabindex="0" aria-label="Gate 1">
+              <circle class="gate-pulse" r="24" opacity="0.2"/>
+              <circle class="gate-ring" r="20" fill="none" stroke-width="2"/>
+              <circle class="gate-fill" r="16"/>
+              <text class="gate-label" text-anchor="middle" dy="-26" font-size="11" font-family="Inter" font-weight="600" fill="rgba(255,255,255,0.85)">G1</text>
+              <text class="gate-wait" text-anchor="middle" dy="4" font-size="8.5" font-family="Inter" font-weight="600" fill="white"/>
+            </g>
+
+            <!-- Gate 2 — Left -->
+            <g class="gate-node" id="gateNode2" data-gate="Gate 2" transform="translate(50,140)" onclick="onGateClick('Gate 2')" role="button" tabindex="0" aria-label="Gate 2">
+              <circle class="gate-pulse" r="24" opacity="0.2"/>
+              <circle class="gate-ring" r="20" fill="none" stroke-width="2"/>
+              <circle class="gate-fill" r="16"/>
+              <text class="gate-label" text-anchor="middle" dy="-26" font-size="11" font-family="Inter" font-weight="600" fill="rgba(255,255,255,0.85)">G2</text>
+              <text class="gate-wait" text-anchor="middle" dy="4" font-size="8.5" font-family="Inter" font-weight="600" fill="white"/>
+            </g>
+
+            <!-- Gate 3 — Right -->
+            <g class="gate-node" id="gateNode3" data-gate="Gate 3" transform="translate(430,140)" onclick="onGateClick('Gate 3')" role="button" tabindex="0" aria-label="Gate 3">
+              <circle class="gate-pulse" r="24" opacity="0.2"/>
+              <circle class="gate-ring" r="20" fill="none" stroke-width="2"/>
+              <circle class="gate-fill" r="16"/>
+              <text class="gate-label" text-anchor="middle" dy="-26" font-size="11" font-family="Inter" font-weight="600" fill="rgba(255,255,255,0.85)">G3</text>
+              <text class="gate-wait" text-anchor="middle" dy="4" font-size="8.5" font-family="Inter" font-weight="600" fill="white"/>
+            </g>
+
+            <!-- Gate 4 — Bottom left -->
+            <g class="gate-node" id="gateNode4" data-gate="Gate 4" transform="translate(80,290)" onclick="onGateClick('Gate 4')" role="button" tabindex="0" aria-label="Gate 4">
+              <circle class="gate-pulse" r="24" opacity="0.2"/>
+              <circle class="gate-ring" r="20" fill="none" stroke-width="2"/>
+              <circle class="gate-fill" r="16"/>
+              <text class="gate-label" text-anchor="middle" dy="-26" font-size="11" font-family="Inter" font-weight="600" fill="rgba(255,255,255,0.85)">G4</text>
+              <text class="gate-wait" text-anchor="middle" dy="4" font-size="8.5" font-family="Inter" font-weight="600" fill="white"/>
+            </g>
+
+            <!-- Gate 5 — Bottom right -->
+            <g class="gate-node" id="gateNode5" data-gate="Gate 5" transform="translate(400,290)" onclick="onGateClick('Gate 5')" role="button" tabindex="0" aria-label="Gate 5">
+              <circle class="gate-pulse" r="24" opacity="0.2"/>
+              <circle class="gate-ring" r="20" fill="none" stroke-width="2"/>
+              <circle class="gate-fill" r="16"/>
+              <text class="gate-label" text-anchor="middle" dy="-26" font-size="11" font-family="Inter" font-weight="600" fill="rgba(255,255,255,0.85)">G5</text>
+              <text class="gate-wait" text-anchor="middle" dy="4" font-size="8.5" font-family="Inter" font-weight="600" fill="white"/>
+            </g>
+
+            <!-- Route Highlight Layer (Drawn as a separated overlay on top of fixed gate points) -->
+            <line id="routeHighlight" x1="0" y1="0" x2="0" y2="0" stroke="var(--brand-gold)" stroke-width="3" stroke-dasharray="6,4" opacity="0" pointer-events="none" style="display:none;"/>
+
+            <!-- Tooltip overlay -->
+            <g id="mapTooltip" opacity="0" pointer-events="none">
+              <rect id="tooltipBg" rx="8" ry="8" fill="rgba(15,23,42,0.95)" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>
+              <text id="tooltipTitle"  x="0" y="0" font-size="11" font-family="Inter" font-weight="700" fill="white"/>
+              <text id="tooltipWait"   x="0" y="0" font-size="10" font-family="Inter" fill="rgba(255,255,255,0.7)"/>
+              <text id="tooltipAccess" x="0" y="0" font-size="10" font-family="Inter" fill="rgba(255,255,255,0.7)"/>
+            </g>
+
+            <!-- ─ User location dot ─ -->
+            <g id="userLocationDot" opacity="0" pointer-events="none">
+              <!-- Outer ripple ring -->
+              <circle id="userRipple" r="22" fill="none" stroke="rgba(56,189,248,0.35)" stroke-width="1.5"/>
+              <!-- Mid ring -->
+              <circle r="14" fill="rgba(56,189,248,0.18)" stroke="rgba(56,189,248,0.5)" stroke-width="1"/>
+              <!-- Core dot -->
+              <circle r="7" fill="hsl(199,100%,58%)" stroke="white" stroke-width="2"/>
+              <!-- Accuracy label -->
+              <text id="userDotLabel" text-anchor="middle" dy="-20" font-size="9" font-family="Inter" font-weight="600" fill="hsl(199,100%,70%)">📍 You</text>
+            </g>
+
+            <!-- ─ Proximity label (closest gate) ─ -->
+            <g id="proximityLabel" opacity="0" pointer-events="none">
+              <rect id="proxBg" rx="6" ry="6" fill="rgba(15,23,42,0.92)" stroke="rgba(56,189,248,0.35)" stroke-width="1"/>
+              <text id="proxText" x="0" y="0" font-size="9.5" font-family="Inter" font-weight="600" fill="hsl(199,100%,70%)"/>
+            </g>
+          </g>
+        </svg>
+      </div>
+      <!-- Seat Finder panel -->
+      <div class="seat-finder" id="seatFinder">
+        <div class="seat-finder-row">
+          <span class="seat-finder-icon">🎟</span>
+          <input type="text" id="seatInput" class="seat-input" placeholder="Section number (e.g. 214, 108, 340)…" maxlength="4"
+            aria-label="Enter section number" onkeydown="if(event.key==='Enter')findMySection(document.getElementById('seatInput').value)"/>
+          <button class="seat-find-btn" onclick="findMySection(document.getElementById('seatInput').value)" id="seatFindBtn">Find Seat</button>
+        </div>
+        <div class="seat-result hidden" id="seatResult" aria-live="polite"></div>
+        <p class="indoor-nav-note">📶 Indoor navigation uses the venue's fixed schematic — GPS signal doesn't penetrate stadium structures reliably.</p>
+      </div>
+      <!-- Live update indicator + location status -->
+      <div class="map-footer">
+        <div class="live-badge">
+          <span class="live-dot"></span> LIVE · Updates every 30s
+        </div>
+        <div class="location-status" id="locationStatus">
+          <span class="location-status-dot" id="locationStatusDot"></span>
+          <span id="locationStatusText">Acquiring GPS…</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Chat Panel -->
+    <section class="chat-panel" aria-label="AI concierge chat">
+      <div class="chat-header">
+        <div class="genie-avatar" aria-hidden="true">⚡</div>
+        <div class="chat-header-text">
+          <div class="chat-title">StadiumPulse</div>
+          <div class="chat-subtitle">AI Concierge · Powered by Gemini</div>
+        </div>
+        <button class="voice-mute-btn" id="voiceMuteBtn" onclick="toggleVoiceMute()" title="Mute/Unmute Voice Replies" aria-label="Toggle voice replies">🔇</button>
+        <div class="status-dot online" title="Online"></div>
+      </div>
+
+      <!-- Proactive Recommendation Card -->
+      <div class="recommended-card hidden" id="recommendedCard" aria-live="polite">
+        <!-- Populated dynamically via JS -->
+      </div>
+
+      <div class="messages-area" id="messagesArea" role="log" aria-live="polite" aria-label="Chat messages">
+        <!-- Welcome message injected by JS -->
+      </div>
+
+      <!-- Quick reply chips -->
+      <div class="quick-chips" id="quickChips">
+        <button class="chip" onclick="sendChip(this)" id="chip1">⚡ Which gate is fastest?</button>
+        <button class="chip" onclick="sendChip(this)" id="chip2">♿ I need wheelchair access</button>
+        <button class="chip" onclick="sendChip(this)" id="chip3">🏠 How do I get home after?</button>
+        <button class="chip" onclick="sendChip(this)" id="chip4">🚻 ¿Dónde está el baño?</button>
+        <button class="chip" onclick="sendChip(this)" id="chip5">🎟 How do I get to Section 214?</button>
+        <button class="chip" onclick="sendChip(this)" id="chip6">✈️ How far am I from the match?</button>
+      </div>
+
+      <form class="chat-input-row" id="chatForm" onsubmit="handleSubmit(event)">
+        <input
+          type="text"
+          id="chatInput"
+          class="chat-input"
+          placeholder="Ask anything… in any language 🌍"
+          autocomplete="off"
+          maxlength="500"
+          aria-label="Type your question"
+        />
+        <button type="button" class="mic-btn" id="micBtn" onclick="toggleVoiceInput()" aria-label="Voice input" title="Speak your question">🎙️</button>
+        <button type="submit" class="send-btn" id="sendBtn" aria-label="Send message">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="22" y1="2" x2="11" y2="13"/>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+          </svg>
+        </button>
+      </form>
+      <p class="api-hint" id="apiHint">
+        🔑 Add your Gemini API key in <code>app.js</code> to enable real AI responses.
+      </p>
+    </section>
+
+  </main>
+
+  <!-- ─── Ops Dashboard ─────────────────────────────────────────── -->
+  <main class="ops-view hidden" id="opsView">
+    <div class="ops-container">
+      <div class="ops-hero">
+        <h1 class="ops-title">Staff Operations Dashboard</h1>
+        <p class="ops-subtitle">MetLife Stadium — Live Intelligence Feed</p>
+        <div class="ops-timestamp" id="opsTimestamp">–</div>
+      </div>
+
+      <!-- Proactive Recommended Action Card -->
+      <div class="recommended-action-card hidden" id="recommendedActionCard" aria-live="polite">
+        <!-- Populated dynamically via JS -->
+      </div>
+
+      <!-- KPI row -->
+      <div class="kpi-row" id="kpiRow">
+        <!-- populated by JS -->
+      </div>
+
+      <!-- Gate table + AI briefing -->
+      <div class="ops-grid">
+        <div class="ops-card">
+          <div class="ops-card-header">
+            <span class="ops-card-icon">🚪</span>
+            <h2 class="ops-card-title">Gate Status</h2>
+            <span class="live-badge-small"><span class="live-dot"></span> LIVE</span>
+          </div>
+          <table class="gate-table" id="gateTable">
+            <thead>
+              <tr>
+                <th>Gate</th>
+                <th>Congestion</th>
+                <th>Wait</th>
+                <th>Accessible</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="gateTableBody">
+              <!-- populated by JS -->
+            </tbody>
+          </table>
+        </div>
+
+        <div class="ops-card">
+          <div class="ops-card-header">
+            <span class="ops-card-icon">🤖</span>
+            <h2 class="ops-card-title">AI Ops Briefing</h2>
+            <button class="refresh-btn" id="refreshBriefing" onclick="generateOpsBriefing()">↻ Refresh</button>
+          </div>
+          <div class="ai-briefing" id="aiBriefing">
+            <div class="briefing-loading">Generating briefing…</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Transport + Amenities -->
+      <div class="ops-grid ops-grid-3">
+        <div class="ops-card">
+          <div class="ops-card-header">
+            <span class="ops-card-icon">🚌</span>
+            <h2 class="ops-card-title">Transport</h2>
+          </div>
+          <div class="info-list" id="transportInfo">
+            <!-- populated by JS -->
+          </div>
+        </div>
+
+        <div class="ops-card">
+          <div class="ops-card-header">
+            <span class="ops-card-icon">🗺️</span>
+            <h2 class="ops-card-title">Amenities</h2>
+          </div>
+          <div class="info-list" id="amenityInfo">
+            <!-- populated by JS -->
+          </div>
+        </div>
+
+        <div class="ops-card">
+          <div class="ops-card-header">
+            <span class="ops-card-icon">⚽</span>
+            <h2 class="ops-card-title">Match Info</h2>
+          </div>
+          <div class="info-list" id="matchInfo">
+            <!-- populated by JS -->
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Core configuration, prompts, and global states -->
+  <script src="js/constants.js"></script>
+  <!-- Math utilities, Haversine, coordinate scales -->
+  <script src="js/utils.js"></script>
+  <!-- Visual renderings: Map layout viewport calculations, zooms & pans -->
+  <script src="js/map.js"></script>
+  <!-- Chat messages, STT voice triggers, TTS synthesizers, rule-based routers -->
+  <script src="js/chat.js"></script>
+  <!-- Staff operational dashboard feeds, sustainability trackers, dynamic KPIs -->
+  <script src="js/ops.js"></script>
+  <!-- Alert checker ticks, recommended scoring calculation evaluation indices -->
+  <script src="js/engine.js"></script>
+  <!-- main application bootstrap init, location watchers -->
+  <script src="js/main.js"></script>
+</body>
+</html>

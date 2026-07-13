@@ -1,0 +1,26 @@
+{
+  "match": {
+    "teams": "Argentina vs Croatia",
+    "kickoff_in_minutes": 42,
+    "stadium": "MetLife Stadium",
+    "weather": "Clear, 24°C"
+  },
+  "gates": [
+    { "id": "Gate 1", "congestion": "low",    "wait_minutes": 2,  "accessible": true,  "lat": 40.8148, "lng": -74.0745 },
+    { "id": "Gate 2", "congestion": "high",   "wait_minutes": 18, "accessible": true,  "lat": 40.8135, "lng": -74.0768 },
+    { "id": "Gate 3", "congestion": "medium", "wait_minutes": 9,  "accessible": false, "lat": 40.8135, "lng": -74.0722 },
+    { "id": "Gate 4", "congestion": "high",   "wait_minutes": 20, "accessible": true,  "lat": 40.8120, "lng": -74.0760 },
+    { "id": "Gate 5", "congestion": "low",    "wait_minutes": 3,  "accessible": true,  "lat": 40.8120, "lng": -74.0728 }
+  ],
+  "amenities": [
+    { "type": "restroom",    "location": "Section 214 concourse", "accessible": true },
+    { "type": "restroom",    "location": "Section 108 concourse", "accessible": true },
+    { "type": "first_aid",   "location": "Gate 3 concourse",      "accessible": true },
+    { "type": "family_room", "location": "Section 120",           "accessible": true }
+  ],
+  "transport": {
+    "shuttle_status": "running every 10 min",
+    "nearest_transit": "Meadowlands Rail Station, 12 min walk",
+    "rideshare_pickup": "Lot F, moderate queue (~15 min)"
+  }
+}
