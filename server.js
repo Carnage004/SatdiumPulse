@@ -42,4 +42,7 @@ const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
   console.log(`StadiumPulse backend proxy listening on port ${PORT}`);
   console.log('GEMINI_API_KEY is set:', !!process.env.GEMINI_API_KEY);
+  console.log('GEMINI_API_KEY length:', (process.env.GEMINI_API_KEY || '').length);
+  console.log('GEMINI_API_KEY first 4 chars:', (process.env.GEMINI_API_KEY || '').slice(0, 4));
+  console.log('All env var names containing GEMINI:', Object.keys(process.env).filter(k => k.toUpperCase().includes('GEMINI')));
 });
