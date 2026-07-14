@@ -332,37 +332,122 @@ function buildContextPayload() {
 }
 
 /**
- * Sends messages to the Express backend proxy endpoint (/api/chat) or falls back
- * gracefully to rule-based routing if the server fails or lacks config.
+ * Sends messages to the Express backend proxy endpoint (/api/chat) with dialogue
+ * history. Truncates history to the last 9 messages (4 turns) to avoid 429 rate limits,
+ * aggregates truncated preferences into a running summary, and implements a
+ * 7-second retry back-off for 429 responses.
  */
 async function getAIResponse(userMessage) {
-  const contextData = buildContextPayload();
-  const contextPayload = JSON.stringify(contextData, null, 2);
-  const fullUserMessage = `Stadium operations data:\n\`\`\`json\n${contextPayload}\n\`\`\`\n\nFan question: ${userMessage}`;
+  // Push the new user message to the persistent chat history
+  chatHistory.push({ role: 'user', parts: [{ text: userMessage }] });
 
-  try {
-    const res = await fetch('/api/chat', {
+  // 1. Scan discarded history to maintain a summary of older turns/preferences
+  let runningSummary = "";
+  if (chatHistory.length > 9) {
+    const discarded = chatHistory.slice(0, -9);
+    let summaryTerms = [];
+    discarded.forEach(msg => {
+      if (msg.role === 'user') {
+        const txt = msg.parts[0].text.toLowerCase();
+        if (txt.includes('wheelchair') || txt.includes('access') || txt.includes('silla de ruedas')) {
+          if (!summaryTerms.includes('User needs wheelchair/accessible routing.')) {
+            summaryTerms.push('User needs wheelchair/accessible routing.');
+          }
+        }
+        if (txt.includes('rain') || txt.includes('weather') || txt.includes('umbrella')) {
+          if (!summaryTerms.includes('User is concerned about rainy weather.')) {
+            summaryTerms.push('User is concerned about rainy weather.');
+          }
+        }
+      }
+    });
+    if (summaryTerms.length > 0) {
+      runningSummary = `Important preferences from earlier in the conversation: ${summaryTerms.join(' ')}`;
+    }
+  }
+
+  // 2. Clone and slice the history to only send the most recent 9 messages
+  let apiContents = chatHistory.map(msg => ({
+    role: msg.role,
+    parts: [{ text: msg.parts[0].text }]
+  }));
+  apiContents = apiContents.slice(-9);
+
+  // 3. Inject the live operations context ONLY into the latest user message
+  if (apiContents.length > 0 && apiContents[apiContents.length - 1].role === 'user') {
+    const contextData = buildContextPayload();
+    const contextPayload = JSON.stringify(contextData, null, 2);
+    const userText = apiContents[apiContents.length - 1].parts[0].text;
+    apiContents[apiContents.length - 1].parts[0].text = `Stadium operations data:\n\`\`\`json\n${contextPayload}\n\`\`\`\n\nFan question: ${userText}`;
+  }
+
+  // Prepend runningSummary to the system prompt if present
+  const sysInstruction = SYSTEM_PROMPT + (runningSummary ? `\n\n${runningSummary}` : '');
+
+  const makeRequest = async () => {
+    return await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        contents: [
-          { role: 'user', parts: [{ text: fullUserMessage }] }
-        ],
-        systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+        contents: apiContents,
+        systemInstruction: { parts: [{ text: sysInstruction }] },
         generationConfig: { temperature: 0.4, maxOutputTokens: 250 }
       })
     });
+  };
 
-    if (!res.ok) {
+  try {
+    let res = await makeRequest();
+    let isRateLimited = res.status === 429;
+    let errorText = "";
+
+    // Parse status and potential 500 wrappers containing 429 details
+    if (res.status === 500 || res.status === 429) {
+      errorText = await res.clone().text();
+      if (errorText.includes('429') || errorText.includes('RESOURCE_EXHAUSTED') || errorText.includes('rate limit')) {
+        isRateLimited = true;
+      }
+    }
+
+    // 4. Implement 429 retry logic: wait 7 seconds and try once more
+    if (isRateLimited) {
+      console.warn("Rate limit (429) encountered. Retrying in 7 seconds...");
+      await delay(7000);
+      res = await makeRequest();
+
+      if (!res.ok) {
+        errorText = await res.text();
+        if (res.status === 429 || errorText.includes('429') || errorText.includes('RESOURCE_EXHAUSTED')) {
+          const busyMsg = "The assistant is a bit busy right now — please try again in a moment.";
+          chatHistory.push({ role: 'model', parts: [{ text: busyMsg }] });
+          return busyMsg;
+        }
+        const fallback = getFallbackResponse(userMessage);
+        chatHistory.push({ role: 'model', parts: [{ text: fallback }] });
+        return fallback;
+      }
+    } else if (!res.ok) {
       console.warn("Backend proxy returned error status, using local fallback responses.");
-      return getFallbackResponse(userMessage);
+      const fallback = getFallbackResponse(userMessage);
+      chatHistory.push({ role: 'model', parts: [{ text: fallback }] });
+      return fallback;
     }
 
     const data = await res.json();
-    return data?.candidates?.[0]?.content?.parts?.[0]?.text || getFallbackResponse(userMessage);
+    const replyText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (replyText) {
+      chatHistory.push({ role: 'model', parts: [{ text: replyText }] });
+      return replyText;
+    } else {
+      const fallback = getFallbackResponse(userMessage);
+      chatHistory.push({ role: 'model', parts: [{ text: fallback }] });
+      return fallback;
+    }
   } catch(e) {
     console.error("Failed to connect to backend proxy:", e);
-    return getFallbackResponse(userMessage);
+    const fallback = getFallbackResponse(userMessage);
+    chatHistory.push({ role: 'model', parts: [{ text: fallback }] });
+    return fallback;
   }
 }
 

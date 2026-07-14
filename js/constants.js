@@ -182,3 +182,4 @@ let highlightedGate = null;
 
 let isProcessingChat = false;
 let needsAccessibility = false;
+let chatHistory = [];
