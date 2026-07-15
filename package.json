@@ -4,9 +4,11 @@
   "description": "StadiumPulse — FIFA World Cup 2026 AI Concierge",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "node --test"
   },
   "dependencies": {
-    "express": "^4.19.2"
+    "express": "^4.19.2",
+    "express-rate-limit": "^8.5.2"
   }
 }

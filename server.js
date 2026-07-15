@@ -1,8 +1,35 @@
 const express = require('express');
 const path = require('path');
 
+const rateLimit = require('express-rate-limit');
+
 const app = express();
 app.use(express.json());
+
+// Restrict CORS origins to same-origin and localhost/127.0.0.1
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (!origin || origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1')) {
+    res.setHeader('Access-Control-Allow-Origin', origin || '*');
+  } else {
+    res.setHeader('Access-Control-Allow-Origin', 'null');
+  }
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
+
+// Configure Rate Limiter to prevent runaway API costs
+const chatLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 30, // limit each IP to 30 requests per minute
+  message: { error: "Too many requests. Please try again in a moment." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 // Serve all static files (index.html, styles.css, js/, json/ etc.) from root
 app.use(express.static(__dirname));
@@ -11,7 +38,26 @@ const PRIMARY_MODEL = 'gemini-3.5-flash';
 const FALLBACK_MODEL = 'gemini-2.5-flash-lite';
 
 // POST proxy endpoint for the Gemini API
-app.post('/api/chat', async (req, res) => {
+app.post('/api/chat', chatLimiter, async (req, res) => {
+  // Input Validation
+  if (!req.body || !req.body.contents || !Array.isArray(req.body.contents) || req.body.contents.length === 0) {
+    return res.status(400).json({ error: "Missing or invalid 'contents' in request body." });
+  }
+
+  const lastMessage = req.body.contents[req.body.contents.length - 1];
+  if (!lastMessage || !lastMessage.parts || !Array.isArray(lastMessage.parts) || lastMessage.parts.length === 0) {
+    return res.status(400).json({ error: "Invalid parts structure in the last message." });
+  }
+
+  const messageText = lastMessage.parts[0].text;
+  if (typeof messageText !== 'string' || messageText.trim() === '') {
+    return res.status(400).json({ error: "Message body cannot be empty." });
+  }
+
+  if (messageText.length > 2000) {
+    return res.status(400).json({ error: "Message body is too long (maximum 2000 characters)." });
+  }
+
   try {
     const makeGeminiRequest = async (model) => {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`;
@@ -87,11 +133,15 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-const PORT = process.env.PORT || 8080;
-app.listen(PORT, () => {
-  console.log(`StadiumPulse backend proxy listening on port ${PORT}`);
-  console.log('GEMINI_API_KEY is set:', !!process.env.GEMINI_API_KEY);
-  console.log('GEMINI_API_KEY length:', (process.env.GEMINI_API_KEY || '').length);
-  console.log('GEMINI_API_KEY first 4 chars:', (process.env.GEMINI_API_KEY || '').slice(0, 4));
-  console.log('All env var names containing GEMINI:', Object.keys(process.env).filter(k => k.toUpperCase().includes('GEMINI')));
-});
+if (require.main === module) {
+  const PORT = process.env.PORT || 8080;
+  app.listen(PORT, () => {
+    console.log(`StadiumPulse backend proxy listening on port ${PORT}`);
+    console.log('GEMINI_API_KEY is set:', !!process.env.GEMINI_API_KEY);
+    console.log('GEMINI_API_KEY length:', (process.env.GEMINI_API_KEY || '').length);
+    console.log('GEMINI_API_KEY first 4 chars:', (process.env.GEMINI_API_KEY || '').slice(0, 4));
+    console.log('All env var names containing GEMINI:', Object.keys(process.env).filter(k => k.toUpperCase().includes('GEMINI')));
+  });
+}
+
+module.exports = app;
