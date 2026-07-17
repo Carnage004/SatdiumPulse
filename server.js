@@ -40,6 +40,11 @@ const FALLBACK_MODEL = 'gemini-2.5-flash-lite';
 
 // POST proxy endpoint for the Gemini API
 app.post('/api/chat', chatLimiter, async (req, res) => {
+  // Truncate conversation history on the server side first (limit to last 9 messages / ~4 turns)
+  if (req.body && req.body.contents && Array.isArray(req.body.contents)) {
+    req.body.contents = req.body.contents.slice(-9);
+  }
+
   // Input Validation
   if (!req.body || !req.body.contents || !Array.isArray(req.body.contents) || req.body.contents.length === 0) {
     return res.status(400).json({ error: "Missing or invalid 'contents' in request body." });
@@ -55,7 +60,15 @@ app.post('/api/chat', chatLimiter, async (req, res) => {
     return res.status(400).json({ error: "Message body cannot be empty." });
   }
 
-  if (messageText.length > 2000) {
+  // Extract only the raw user query text to validate the character limit
+  let userQuery = messageText;
+  const fanQuestionMarker = "\n\nFan question: ";
+  const markerIdx = messageText.lastIndexOf(fanQuestionMarker);
+  if (markerIdx !== -1) {
+    userQuery = messageText.substring(markerIdx + fanQuestionMarker.length);
+  }
+
+  if (userQuery.length > 2000) {
     return res.status(400).json({ error: "Message body is too long (maximum 2000 characters)." });
   }
 
