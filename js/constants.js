@@ -111,11 +111,10 @@ const CITY_COORDS = {
   'buenos aires': [-34.6037, -58.3816], 'bogota': [4.7110, -74.0721],
   'lima': [-12.0464, -77.0428], 'santiago': [-33.4489, -70.6693],
 };
-
 // System Prompt guiding the Gemini assistant personality & rules
 const SYSTEM_PROMPT = `You are StadiumPulse, an AI concierge for fans at a FIFA World Cup 2026 stadium.
 
-You will be given a JSON snapshot of live stadium operations data (gate congestion, match clock, amenities, transport) and a fan's question, which may be in any language.
+You will be given a JSON snapshot of live stadium operations data (gate congestion, match clock, amenities, transport, routes) and a fan's question, which may be in any language.
 
 You should directly and specifically answer questions in the following categories:
 1. Getting TO the stadium (directions, transit, driving, parking) — use the transport details to describe transit stations, shuttles, and rideshare points. Also refer to CO2 emissions footprints: Shuttle is low [Eco: low], Transit/walking is lowest [Eco: lowest], Rideshare is medium [Eco: medium], Private car is high [Eco: high].
@@ -124,6 +123,7 @@ You should directly and specifically answer questions in the following categorie
 4. Accessibility questions — recommend only accessible: true gates or restrooms.
 5. Live match / distance questions — use live_match distance_km and flight_hours relative to the fan's location.
 6. General event info (kickoff time, weather, teams playing).
+7. Gate-to-gate walking routes (shortest path between gates, e.g. from Gate X to Gate Y) — use the routes data to provide the walking distance, estimated walk time, and a concise description of the path. Always supply the exact route details provided in the dataset rather than guessing or outputting general congestion information.
 
 Rules:
 - Always respond in the same language the fan used.
@@ -137,6 +137,7 @@ Rules:
 - If identified_venue is provided, reference that stadium by name.
 - If target_section is provided, give specific routing directions to reach that seating section via the nearest gate.
 - If the fan asks "how do I get to my seat" or similar without specifying a section number, ask a brief clarifying question (e.g., "Which section is your seat in?").
+- When asked for a route between gates (e.g. from Gate 5 to Gate 4), check the routes dataset in the live stadium operations data. Respond with the distance, walkTime, and the path description provided for that specific gate pair. Do not fall back to discussing congestion or wait times unless also asked.
 - When introducing yourself, always use the name StadiumPulse.
 - If weather indicates rain/showers/extreme conditions, proactively mention this and advise covered routes/gates or indoor amenities.
 - If recommending a transport mode, recommend the greener alternative and show its eco-rating tag (e.g. [Eco: low], [Eco: lowest]).`;
@@ -183,3 +184,54 @@ let highlightedGate = null;
 let isProcessingChat = false;
 let needsAccessibility = false;
 let chatHistory = [];
+
+function getEmbeddedData() {
+  return {
+    "match": {
+      "teams": "Argentina vs Croatia",
+      "kickoff_in_minutes": 42,
+      "stadium": "MetLife Stadium",
+      "weather": "Clear, 24°C"
+    },
+    "gates": [
+      { "id": "Gate 1", "congestion": "low",    "wait_minutes": 2,  "accessible": true,  "lat": 40.8148, "lng": -74.0745 },
+      { "id": "Gate 2", "congestion": "high",   "wait_minutes": 18, "accessible": true,  "lat": 40.8135, "lng": -74.0768 },
+      { "id": "Gate 3", "congestion": "medium", "wait_minutes": 9,  "accessible": false, "lat": 40.8135, "lng": -74.0722 },
+      { "id": "Gate 4", "congestion": "high",   "wait_minutes": 20, "accessible": true,  "lat": 40.8120, "lng": -74.0760 },
+      { "id": "Gate 5", "congestion": "low",    "wait_minutes": 3,  "accessible": true,  "lat": 40.8120, "lng": -74.0728 }
+    ],
+    "routes": {
+      "Gate 1 to Gate 2": { "distance": "180m", "walkTime": "2 min", "path": "Head west along the outer concourse loop. Gate 2 is just past the team store on your right." },
+      "Gate 2 to Gate 1": { "distance": "180m", "walkTime": "2 min", "path": "Head east along the outer concourse loop. Gate 1 is just past the plaza gate entrance." },
+      "Gate 1 to Gate 3": { "distance": "160m", "walkTime": "2 min", "path": "Walk east on the main outer path. Gate 3 is located next to the main rail transit entrance." },
+      "Gate 3 to Gate 1": { "distance": "160m", "walkTime": "2 min", "path": "Walk west on the main outer path. Gate 1 is located next to the north entrance plaza." },
+      "Gate 1 to Gate 4": { "distance": "320m", "walkTime": "4 min", "path": "Take the west outer pathway past Gate 2, continue south. Gate 4 is situated on the southwest side of the plaza." },
+      "Gate 4 to Gate 1": { "distance": "320m", "walkTime": "4 min", "path": "Walk north past Gate 2, continue east along the outer path to Gate 1 on the north side." },
+      "Gate 1 to Gate 5": { "distance": "300m", "walkTime": "4 min", "path": "Take the east outer pathway past Gate 3, continue south. Gate 5 is on the southeast plaza entrance." },
+      "Gate 5 to Gate 1": { "distance": "300m", "walkTime": "4 min", "path": "Walk north past Gate 3, continue west along the outer loop to Gate 1 on the north side." },
+      "Gate 2 to Gate 3": { "distance": "340m", "walkTime": "5 min", "path": "Walk north towards Gate 1, then follow the outer concourse east. Gate 3 is on the opposite side near the transit station." },
+      "Gate 3 to Gate 2": { "distance": "340m", "walkTime": "5 min", "path": "Walk north towards Gate 1, then follow the outer concourse west. Gate 2 is past the north plaza." },
+      "Gate 2 to Gate 4": { "distance": "150m", "walkTime": "2 min", "path": "Walk south along the west plaza walkway. Gate 4 is located straight ahead near parking Lot E." },
+      "Gate 4 to Gate 2": { "distance": "150m", "walkTime": "2 min", "path": "Walk north along the west plaza walkway. Gate 2 is located straight ahead past the west ticket windows." },
+      "Gate 2 to Gate 5": { "distance": "400m", "walkTime": "6 min", "path": "Walk north past Gate 1, then east past Gate 3, and follow the loop south. Gate 5 is on the southeast side." },
+      "Gate 5 to Gate 2": { "distance": "400m", "walkTime": "6 min", "path": "Walk north past Gate 3, then west past Gate 1, and follow the loop south. Gate 2 is on the southwest side." },
+      "Gate 3 to Gate 4": { "distance": "390m", "walkTime": "6 min", "path": "Walk south past Gate 5, then turn west across the south plaza. Gate 4 is on the southwest corner." },
+      "Gate 4 to Gate 3": { "distance": "390m", "walkTime": "6 min", "path": "Walk east across the south plaza to Gate 5, then turn north. Gate 3 is on the northeast side." },
+      "Gate 3 to Gate 5": { "distance": "150m", "walkTime": "2 min", "path": "Walk south along the east plaza path. Gate 5 is on your left near parking Lot F." },
+      "Gate 5 to Gate 3": { "distance": "150m", "walkTime": "2 min", "path": "Walk north along the east plaza path. Gate 3 is on your right near the train tracks." },
+      "Gate 4 to Gate 5": { "distance": "220m", "walkTime": "3 min", "path": "Walk straight east across the south plaza walkway. Gate 5 is directly opposite Gate 4." },
+      "Gate 5 to Gate 4": { "distance": "220m", "walkTime": "3 min", "path": "Walk straight west across the south plaza walkway. Gate 4 is directly opposite Gate 5." }
+    },
+    "amenities": [
+      { "type": "restroom",    "location": "Section 214 concourse", "accessible": true },
+      { "type": "restroom",    "location": "Section 108 concourse", "accessible": true },
+      { "type": "first_aid",   "location": "Gate 3 concourse",      "accessible": true },
+      { "type": "family_room", "location": "Section 120",           "accessible": true }
+    ],
+    "transport": {
+      "shuttle_status": "running every 10 min",
+      "nearest_transit": "Meadowlands Rail Station, 12 min walk",
+      "rideshare_pickup": "Lot F, moderate queue (~15 min)"
+    }
+  };
+}

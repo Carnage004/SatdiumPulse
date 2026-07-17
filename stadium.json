@@ -12,6 +12,28 @@
     { "id": "Gate 4", "congestion": "high",   "wait_minutes": 20, "accessible": true,  "lat": 40.8120, "lng": -74.0760 },
     { "id": "Gate 5", "congestion": "low",    "wait_minutes": 3,  "accessible": true,  "lat": 40.8120, "lng": -74.0728 }
   ],
+  "routes": {
+    "Gate 1 to Gate 2": { "distance": "180m", "walkTime": "2 min", "path": "Head west along the outer concourse loop. Gate 2 is just past the team store on your right." },
+    "Gate 2 to Gate 1": { "distance": "180m", "walkTime": "2 min", "path": "Head east along the outer concourse loop. Gate 1 is just past the plaza gate entrance." },
+    "Gate 1 to Gate 3": { "distance": "160m", "walkTime": "2 min", "path": "Walk east on the main outer path. Gate 3 is located next to the main rail transit entrance." },
+    "Gate 3 to Gate 1": { "distance": "160m", "walkTime": "2 min", "path": "Walk west on the main outer path. Gate 1 is located next to the north entrance plaza." },
+    "Gate 1 to Gate 4": { "distance": "320m", "walkTime": "4 min", "path": "Take the west outer pathway past Gate 2, continue south. Gate 4 is situated on the southwest side of the plaza." },
+    "Gate 4 to Gate 1": { "distance": "320m", "walkTime": "4 min", "path": "Walk north past Gate 2, continue east along the outer path to Gate 1 on the north side." },
+    "Gate 1 to Gate 5": { "distance": "300m", "walkTime": "4 min", "path": "Take the east outer pathway past Gate 3, continue south. Gate 5 is on the southeast plaza entrance." },
+    "Gate 5 to Gate 1": { "distance": "300m", "walkTime": "4 min", "path": "Walk north past Gate 3, continue west along the outer loop to Gate 1 on the north side." },
+    "Gate 2 to Gate 3": { "distance": "340m", "walkTime": "5 min", "path": "Walk north towards Gate 1, then follow the outer concourse east. Gate 3 is on the opposite side near the transit station." },
+    "Gate 3 to Gate 2": { "distance": "340m", "walkTime": "5 min", "path": "Walk north towards Gate 1, then follow the outer concourse west. Gate 2 is past the north plaza." },
+    "Gate 2 to Gate 4": { "distance": "150m", "walkTime": "2 min", "path": "Walk south along the west plaza walkway. Gate 4 is located straight ahead near parking Lot E." },
+    "Gate 4 to Gate 2": { "distance": "150m", "walkTime": "2 min", "path": "Walk north along the west plaza walkway. Gate 2 is located straight ahead past the west ticket windows." },
+    "Gate 2 to Gate 5": { "distance": "400m", "walkTime": "6 min", "path": "Walk north past Gate 1, then east past Gate 3, and follow the loop south. Gate 5 is on the southeast side." },
+    "Gate 5 to Gate 2": { "distance": "400m", "walkTime": "6 min", "path": "Walk north past Gate 3, then west past Gate 1, and follow the loop south. Gate 2 is on the southwest side." },
+    "Gate 3 to Gate 4": { "distance": "390m", "walkTime": "6 min", "path": "Walk south past Gate 5, then turn west across the south plaza. Gate 4 is on the southwest corner." },
+    "Gate 4 to Gate 3": { "distance": "390m", "walkTime": "6 min", "path": "Walk east across the south plaza to Gate 5, then turn north. Gate 3 is on the northeast side." },
+    "Gate 3 to Gate 5": { "distance": "150m", "walkTime": "2 min", "path": "Walk south along the east plaza path. Gate 5 is on your left near parking Lot F." },
+    "Gate 5 to Gate 3": { "distance": "150m", "walkTime": "2 min", "path": "Walk north along the east plaza path. Gate 3 is on your right near the train tracks." },
+    "Gate 4 to Gate 5": { "distance": "220m", "walkTime": "3 min", "path": "Walk straight east across the south plaza walkway. Gate 5 is directly opposite Gate 4." },
+    "Gate 5 to Gate 4": { "distance": "220m", "walkTime": "3 min", "path": "Walk straight west across the south plaza walkway. Gate 4 is directly opposite Gate 5." }
+  },
   "amenities": [
     { "type": "restroom",    "location": "Section 214 concourse", "accessible": true },
     { "type": "restroom",    "location": "Section 108 concourse", "accessible": true },
